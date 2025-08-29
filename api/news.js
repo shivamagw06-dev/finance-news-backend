@@ -1,47 +1,29 @@
 // api/news.js
-import fetch from "node-fetch";
 
-let current = 0;
-const sources = [
-  {
-    name: "mediastack",
-    url: `http://api.mediastack.com/v1/news?access_key=${process.env.MEDIASTACK_KEY}&categories=business,finance&limit=10`
-  },
-  {
-    name: "newsapi",
-    url: `https://newsapi.org/v2/top-headlines?category=business&apiKey=${process.env.NEWSAPI_KEY}&pageSize=10`
-  },
-  {
-    name: "gnews",
-    url: `https://gnews.io/api/v4/top-headlines?topic=business&token=${process.env.GNEWS_KEY}&max=10`
-  }
-];
+import fetch from "node-fetch";  // add this import!
 
 export default async function handler(req, res) {
-  let data = [];
-  let tried = 0;
+  try {
+    const apiKey = process.env.GNEWS_API_KEY;
 
-  while (tried < sources.length && data.length === 0) {
-    const source = sources[current];
-    try {
-      const r = await fetch(source.url);
-      const json = await r.json();
-      data = json.articles || json.data || [];
-    } catch (e) {
-      console.error("Error fetching", source.name, e);
+    if (!apiKey) {
+      throw new Error("GNEWS_API_KEY is missing. Set it in Vercel → Environment Variables.");
     }
-    current = (current + 1) % sources.length;
-    tried++;
+
+    const query = req.query.q || "finance";
+
+    const response = await fetch(
+      `https://gnews.io/api/v4/search?q=${query}&lang=en&country=in&max=10&apikey=${apiKey}`
+    );
+
+    if (!response.ok) {
+      throw new Error(`GNews API error: ${response.status}`);
+    }
+
+    const data = await response.json();
+    res.status(200).json(data);
+
+  } catch (error) {
+    res.status(500).json({ error: error.message });
   }
-
-  const payload = data.slice(0, 10).map(item => ({
-    title: item.title,
-    description: item.description,
-    url: item.url,
-    image: item.image || item.urlToImage || "",
-    source: item.source?.name || ""
-  }));
-
-  res.setHeader("Cache-Control", "s-maxage=1800, stale-while-revalidate");
-  res.status(200).json(payload);
 }
