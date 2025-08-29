@@ -1,11 +1,15 @@
 export default async function handler(req, res) {
-  const key = process.env.NEWSAPI_KEY;
-  const q = req.query.q || "markets";
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader("Access-Control-Allow-Methods", "GET, OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+  if (req.method === "OPTIONS") return res.status(204).end();
+
+  const key  = process.env.NEWSAPI_KEY;
+  const q    = req.query.q || "markets";
   const page = Number(req.query.page || 1);
   const pageSize = Number(req.query.pageSize || 12);
   if (!key) return res.status(500).json({ error: "Missing NEWSAPI_KEY" });
 
-  // top-headlines gives better India results
   const url = new URL("https://newsapi.org/v2/top-headlines");
   url.searchParams.set("country", "in");
   url.searchParams.set("category", "business");
